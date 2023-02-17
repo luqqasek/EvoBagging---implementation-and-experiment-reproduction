@@ -23,7 +23,8 @@ class EvoBagging:
                  metric_name: str = None,
                  logging: bool = False,
                  disable_progress_bar: bool = False,
-                 classifier_restricted: bool = True):
+                 classifier_restricted: bool = True,
+                 selection: str = 'naive'):
         """Evolutionary Bagging model.
 
         Parameters
@@ -50,6 +51,7 @@ class EvoBagging:
         disable_progress_bar: boolean value specifying whether training progress bar should be disabled
         classifier_restricted: boolean value specifying whether max depth of tree should be limited to
             number of features
+        selection: selection scheme for crossover, naive or rank
         """
         assert fitness_threshold or number_of_iteration or \
                stopping_condition_performance_threshold, "Specify stopping conditions"
@@ -73,8 +75,6 @@ class EvoBagging:
 
         # Additional attributes
         self.mode = mode
-        if logging:
-            disable_progress_bar = True
         self.logging = logging
         self.disable_progress_bar = disable_progress_bar
         self.X = None
@@ -82,6 +82,7 @@ class EvoBagging:
         self.model = None
         self.metric = metric_name
         self.minimize = minimize
+        self.selection = selection
         self.classifier_restricted = classifier_restricted
 
     def generate_bag(self):
@@ -252,7 +253,12 @@ class EvoBagging:
             c = c-1
 
         # Selection process
-        pairs, old_generation = self.naive_selection(old_generation, c)
+        # Naive selection
+        if self.selection == "naive":
+            pairs, old_generation = self.naive_selection(old_generation, c)
+        # Rank selection
+        elif self.selection == "rank":
+            pairs, old_generation = self.rank_selection(old_generation, c)
 
         children = []
 
@@ -280,6 +286,29 @@ class EvoBagging:
             children.append(offspring_b)
 
         return children
+
+    @staticmethod
+    def rank_selection(generation, c):
+        """
+        Performs rank selection and returns c pairs of parents without repetition
+        based on https://www.obitko.com/tutorials/genetic-algorithms/selection.php
+        """
+        # in place sorting based on fitness
+        generation.sort(key=lambda e: e['fitness'], reverse=True)
+
+        # normalization coefficient
+        norm_coefficient = len(generation) * (len(generation) + 1) / 2
+
+        # probabilities of selecting parents
+        probabilities = [(i + 1)/norm_coefficient for i in range(len(generation))]
+
+        # sample c parents
+        generation = np.random.choice(a=generation, p=probabilities, size=c, replace=False)
+        permuted_generation_idxs = np.random.permutation(len(generation))
+
+        # creates c/2 pairs
+        pairs = np.split(permuted_generation_idxs, c / 2)
+        return pairs, generation
 
     @staticmethod
     def naive_selection(generation, c):
