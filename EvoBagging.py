@@ -24,7 +24,8 @@ class EvoBagging:
                  logging: bool = False,
                  disable_progress_bar: bool = False,
                  classifier_restricted: bool = True,
-                 selection: str = 'naive'):
+                 selection: str = 'naive',
+                 voting_rule: str = "majority"):
         """Evolutionary Bagging model.
 
         Parameters
@@ -52,12 +53,16 @@ class EvoBagging:
         classifier_restricted: boolean value specifying whether max depth of tree should be limited to
             number of features
         selection: selection scheme for crossover, naive or rank
+        voting_rule: voting rule used for predictions , majority or weighted
         """
         assert fitness_threshold or number_of_iteration or \
                stopping_condition_performance_threshold, "Specify stopping conditions"
         assert mode in ["classification",
                         "regression"], "Specify whether you want to perform classification or regression"
         assert metric_name in [function[0] for function in getmembers(mm, isfunction)], "Wrong metric"
+        assert voting_rule in ["majority", "weighted"], "Voting rule should be majority or weighted"
+        if mode == "regression":
+            assert voting_rule == "majority", "Voting rule should not be specified for regression "
 
         # Model hyper-parameters
         self.number_of_initial_bags = number_of_initial_bags
@@ -84,6 +89,7 @@ class EvoBagging:
         self.minimize = minimize
         self.selection = selection
         self.classifier_restricted = classifier_restricted
+        self.voting_rule = voting_rule
 
     def generate_bag(self):
         """
@@ -398,17 +404,26 @@ class EvoBagging:
         """
         Make predictions on current model using majority voting scheme
         """
+        if self.voting_rule == "majority":
+            all_predictions = np.zeros([X.shape[0], len(self.model)])
+            final_predictions = np.zeros([X.shape[0]])
+            for i, individual in enumerate(self.model):
+                all_predictions[:, i] = individual["classifier"].predict(X)
 
-        all_predictions = np.zeros([X.shape[0], len(self.model)])
-        final_predictions = np.zeros([X.shape[0]])
-        for i, individual in enumerate(self.model):
-            all_predictions[:, i] = individual["classifier"].predict(X)
+            if self.mode == "classification":
+                all_predictions = all_predictions.astype(int)
+                final_predictions = np.apply_along_axis(lambda x: np.bincount(x).argmax(), 1, all_predictions)
+            elif self.mode == "regression":
+                final_predictions = np.apply_along_axis(lambda x: np.mean(x), 1, all_predictions)
 
-        if self.mode == "classification":
-            all_predictions = all_predictions.astype(int)
-            final_predictions = np.apply_along_axis(lambda x: np.bincount(x).argmax(), 1, all_predictions)
-        elif self.mode == "regression":
-            final_predictions = np.apply_along_axis(lambda x: np.mean(x), 1, all_predictions)
+        elif self.voting_rule == "weighted":
+            all_predictions = []
+            for bag in self.model:
+                bag_preds = bag['classifier'].predict_proba(X) * bag['performance']
+                all_predictions.append(bag_preds)
+            temp_preds = np.stack(all_predictions)
+            x = temp_preds.mean(axis=0)
+            final_predictions = x[:, 0] < x[:, 1]
 
         return final_predictions
 
