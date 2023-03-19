@@ -36,7 +36,11 @@ for 25 iterations) [Notebook with results](implementation_comparison/implementat
 └── Evobagging.py
     *class implementation of Evolutionary Bagging algorithm*
 ```
-
+Following files are taken form repository published by authors of papers:
+- [diversity.py](diversity.py)
+- [data_processing.py](implementation_comparison/idata_processing.py)
+- [evobagging_methods.py](implementation_comparison/evobagging_methods.py)
+- 
 ## Example usage
 
 This repository provides access to transformed data used in original experiment by DataProcessing class. After loading data
@@ -98,8 +102,9 @@ No information about parameters of classifier (e.g max depth) | While building c
 Mean test accuracy on Red wine dataset is reported to be 92.76% with standard deviation (0.013) (30 experiments) | By running provided implementation we obtained lower accuracy | Left box stands in line with accuracy obtained by our implementation [Notebook with results](implementation_comparison/implementation_comparison.ipynb) |
 Models are trained for given number of iterations | Reported test accuracy comes from iteration where model obtained highest training accuracy - not always last iteration | Depends on the experiment |
 Table 5 on page 8 | maximal tree depth is limited by number of features which is 8 for Pima dataset therefore it is not possible to obtain higher average depth using their script | we run both variants, one with restricted depth of classifier and one without |
-"In each bag of the ensemble, we obtain the average bias of the respective individual learner for all the data samples in the test set." | Bias reduction is reported on train set | we report bias on trian set |
+"In each bag of the ensemble, we obtain the average bias of the respective individual learner for all the data samples in the test set." | Bias reduction is reported on train set | we report bias on train set |
 "To find the optimal number of bags for bagging, we run a search with an interval of 10 and select the one with the highest test classification metric" | In implementation interval of 5 i used between 5 and 100 | We use the same search space as in implementation |
+Number of folds while determining optimal number of bags is not specified | In implementation 3 fold cross validation is used | For better estimation we use 5 fold cross validation |
 Bag B will be mutated by replacing selected random samples given by the mutation size (MS ) from B with the same amount of random samples from Bc | It is not clear whether data instances used to replace samples are sampled with replacement or not. In implementation random sampling without replacement is done | We do the same as in original implementation thus random sampling without replacement |
 Number of iterations for nbit parity problem is not specified | Iteration number is set to 20 | We fix number of iterations to 20 |
 Voting rule experiment | Voting rule has impact on crossover part however while comparing two schemes of prediction model is trained using majority voting and accuracy on test set is reported based on majority voting and weighted voting | We implement experiment as it was implemented in repository as well as our experiment where training and evaluation is done using each of voting schemes |
